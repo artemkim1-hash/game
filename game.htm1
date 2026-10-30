@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Морской сборщик 3D — выбор корабля</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#001122; font-family:Arial,sans-serif; }
+
+  #ui { position:absolute; top:20px; left:20px; color:#0ff; font-size:24px; text-shadow:0 0 10px #0ff; z-index:10; display:none; }
+  #viewmode { position:absolute; top:20px; right:20px; color:#ff0; font-size:18px; background:rgba(0,0,0,0.5); padding:8px 15px; border-radius:5px; z-index:10; display:none; }
+  #changeShipBtn { position:absolute; top:70px; right:20px; color:#0ff; font-size:14px; background:rgba(0,0,0,0.6); padding:8px 15px; border:1px solid #0ff; border-radius:5px; cursor:pointer; z-index:10; display:none; }
+  #changeShipBtn:hover { background:rgba(0,255,255,0.2); }
+  #gameover { position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); color:#f00; font-size:48px; text-align:center; display:none; text-shadow:0 0 20px #f00; z-index:20; }
+  #restart { padding:10px 30px; font-size:20px; background:#0ff; border:none; border-radius:5px; cursor:pointer; display:none; z-index:30; position:absolute; top:55%; left:50%; transform:translateX(-50%); }
+  #instructions { position:absolute; bottom:20px; left:50%; transform:translateX(-50%); color:#8899aa; font-size:16px; text-align:center; z-index:10; display:none; }
+  #error { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#ff0; font-size:18px; text-align:center; display:none; background:rgba(0,0,0,0.8); padding:20px; border-radius:10px; }
+  #crosshair { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:20px; height:20px; pointer-events:none; display:none; z-index:15; }
+  #crosshair::before, #crosshair::after { content:''; position:absolute; background:rgba(0,255,255,0.7); }
+  #crosshair::before { left:9px; top:0; width:2px; height:20px; }
+  #crosshair::after { top:9px; left:0; height:2px; width:20px; }
+
+  #menu {
+    position:absolute; inset:0; z-index:100;
+    background:linear-gradient(180deg, #001122 0%, #003355 100%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:20px; box-sizing:border-box;
+  }
+  #menu h1 { color:#0ff; font-size:42px; margin:0 0 10px; text-shadow:0 0 20px #0ff; letter-spacing:2px; text-align:center; }
+  #menu .subtitle { color:#8899aa; margin-bottom:30px; font-size:16px; text-align:center; }
+  .ship-cards { display:flex; gap:25px; flex-wrap:wrap; justify-content:center; max-width:900px; }
+  .ship-card {
+    width:220px; padding:20px; border:2px solid #0ff; border-radius:12px;
+    background:rgba(0,40,70,0.7); cursor:pointer; text-align:center;
+    transition:all 0.25s; color:#ccffff;
+  }
+  .ship-card:hover { background:rgba(0,255,255,0.15); transform:translateY(-5px); box-shadow:0 0 25px #0ff; }
+  .ship-card .icon { font-size:52px; margin-bottom:10px; }
+  .ship-card .name { font-size:20px; font-weight:bold; color:#0ff; margin-bottom:8px; }
+  .ship-card .desc { font-size:13px; color:#99bbcc; line-height:1.4; }
+
+  @media (max-width: 700px) {
+    #menu h1 { font-size:28px; }
+    .ship-card { width:160px; padding:14px; }
+    .ship-card .icon { font-size:38px; }
+    .ship-card .name { font-size:16px; }
+    .ship-card .desc { font-size:11px; }
+    #ui { font-size:18px; }
+    #viewmode { font-size:13px; padding:6px 10px; }
+    #instructions { font-size:12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- МЕНЮ -->
+<div id="menu">
+  <h1>ВЫБЕРИ КОРАБЛЬ</h1>
+  <div class="subtitle">Собирай буи, уворачивайся от мин</div>
+  <div class="ship-cards">
+    <div class="ship-card" data-ship="bavaria">
+      <div class="icon">⛵</div>
+      <div class="name">Bavaria 37</div>
+      <div class="desc">Современная круизная яхта.<br>Мачта без парусов.</div>
+    </div>
+    <div class="ship-card" data-ship="classic">
+      <div class="icon">🚢</div>
+      <div class="name">Классический парусник</div>
+      <div class="desc">Деревянный корпус,<br>один штурвал, рея.</div>
+    </div>
+    <div class="ship-card" data-ship="motorboat">
+      <div class="icon">🛥️</div>
+      <div class="name">Катер</div>
+      <div class="desc">Скоростной корпус,<br>рубка со стеклом, без мачты.</div>
+    </div>
+  </div>
+</div>
+
+<!-- HUD -->
+<div id="ui">Счёт: <span id="score">0</span></div>
+<div id="viewmode">Вид: 3-е лицо (V — переключить)</div>
+<div id="changeShipBtn">⇄ Сменить корабль</div>
+<div id="crosshair"></div>
+<div id="gameover">КОРАБЛЬ ПОТОПЛЕН</div>
+<button id="restart">Играть снова</button>
+<div id="instructions">W/S — вперёд/назад | Зажмите ЛКМ и водите мышью — поворот | V — вид</div>
+<div id="error">Не удалось загрузить Three.js.<br>Проверьте интернет-соединение.</div>
+
+<!-- Three.js -->ss
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<!-- Логика игры -->
+<script src="part2.js"></script>
+<script src="part3.js"></script>
+</body>
+</html>
